@@ -1,0 +1,12 @@
+# Trakt credentials
+# Get them from https://trakt.tv/oauth/applications
+TRAKT_CLIENT_ID=tu_client_id_aqui
+TRAKT_CLIENT_SECRET=tu_client_secret_aqui
+TRAKT_APPLICATION_ID=tu_application_id_aqui
+TRAKT_ACCESS_TOKEN=tu_access_token_aqui
+TRAKT_REFRESH_TOKEN=tu_refresh_token_aqui
+
+# Server configuration
+HOST=0.0.0.0
+PORT=5000
+LOG_LEVEL=INFO

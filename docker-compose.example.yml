@@ -1,0 +1,67 @@
+services:
+  traefik:
+    image: traefik:v2.11
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "YOUR_IP:80:80"
+      - "YOUR_IP:443:443"
+      - "YOUR_INTERNAL_IP:8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./volumes/certs:/letsencrypt
+    command:
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.email=your-email@example.com
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --accesslog=true
+      - --accesslog.format=common
+    networks:
+      - trakt-network
+    labels:
+      - "traefik.enable=true"
+
+  trakt-webhook-server:
+    build:
+      context: .
+      dockerfile: src/Dockerfile
+    container_name: trakt-webhook-server
+    env_file:
+      - config.env
+    volumes:
+      - ./config.env:/app/config.env:rw
+    restart: unless-stopped
+    networks:
+      - trakt-network
+    labels:
+      - "traefik.enable=true"
+      # Main router with IP whitelist for all endpoints except /health and /refresh-token
+      - "traefik.http.routers.webhook.rule=Host(`trakt-webhook.example.com`) && !PathPrefix(`/health`) && !PathPrefix(`/refresh-token`)"
+      - "traefik.http.routers.webhook.entrypoints=websecure"
+      - "traefik.http.routers.webhook.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.webhook.middlewares=webhook-ipwhitelist"
+      # Router for /health without IP restriction
+      - "traefik.http.routers.webhook-health.rule=Host(`trakt-webhook.example.com`) && PathPrefix(`/health`)"
+      - "traefik.http.routers.webhook-health.entrypoints=websecure"
+      - "traefik.http.routers.webhook-health.tls.certresolver=letsencrypt"
+      # Router for /refresh-token without IP restriction (for cron jobs)
+      - "traefik.http.routers.webhook-refresh.rule=Host(`trakt-webhook.example.com`) && PathPrefix(`/refresh-token`)"
+      - "traefik.http.routers.webhook-refresh.entrypoints=websecure"
+      - "traefik.http.routers.webhook-refresh.tls.certresolver=letsencrypt"
+      # Shared service
+      - "traefik.http.services.webhook.loadbalancer.server.port=5000"
+      # IP whitelist middleware (replace with your Emby server IP)
+      - "traefik.http.middlewares.webhook-ipwhitelist.ipwhitelist.sourcerange=YOUR_EMBY_IP/32"
+
+networks:
+  trakt-network:
+    driver: bridge
+
