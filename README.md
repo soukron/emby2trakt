@@ -63,12 +63,16 @@ Follow the instructions to authorize the application and get your access/refresh
 
 ### 4. Configure Docker Compose
 
+You have two deployment options:
+
+#### Option A: With Traefik (Recommended for Production)
+
 The `docker-compose.example.yml` file provides a template that sets up:
 - Traefik reverse proxy with Let's Encrypt SSL
 - IP whitelist middleware for webhook endpoint
 - Health and refresh-token endpoints without IP restrictions
 
-Steps:
+**Steps:**
 1. Copy the example Docker Compose file:
    ```bash
    cp docker-compose.example.yml docker-compose.yml
@@ -94,6 +98,42 @@ Steps:
    - "traefik.http.middlewares.webhook-ipwhitelist.ipwhitelist.sourcerange=192.168.1.100/32"
    ```
 
+**Pros:**
+- Automatic SSL/TLS certificates via Let's Encrypt
+- IP whitelist protection for webhook endpoint
+- Reverse proxy with routing rules
+- Better security for production deployments
+
+#### Option B: Simple Direct Exposure (For Testing/Internal Use)
+
+The `docker-compose.simple.example.yml` file provides a minimal setup that exposes the server directly:
+
+**Steps:**
+1. Copy the simple Docker Compose file:
+   ```bash
+   cp docker-compose.simple.example.yml docker-compose.yml
+   ```
+
+2. Edit `docker-compose.yml` and update:
+   - **Port binding** (line 9): Replace `YOUR_IP` with your server's IP address (or use `0.0.0.0` to bind to all interfaces)
+   - **Port number**: Adjust if you want to use a different port than 5000
+
+   Example:
+   ```yaml
+   ports:
+     - "0.0.0.0:5000:5000"  # Expose on all interfaces, port 5000
+   ```
+
+**Pros:**
+- Simpler setup, no reverse proxy needed
+- Faster to get started
+- Good for testing or internal networks
+
+**Cons:**
+- No automatic SSL/TLS (use HTTP only or configure SSL manually)
+- No IP whitelist protection (consider firewall rules)
+- Less secure for public internet exposure
+
 ### 5. Run with Docker Compose
 
 ```bash
@@ -103,7 +143,8 @@ docker compose up -d
 ### 6. Configure Emby Webhook
 
 In your Emby server settings, add a webhook pointing to:
-- `https://your-domain/webhook` (or `/`)
+- **With Traefik**: `https://your-domain/webhook` (or `/`)
+- **Simple setup**: `http://your-server-ip:5000/webhook` (or `/`)
 
 ## Configuration
 
