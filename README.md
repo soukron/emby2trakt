@@ -61,13 +61,46 @@ python3 src/get_trakt_token.py
 
 Follow the instructions to authorize the application and get your access/refresh tokens. Add them to `config.env`.
 
-### 4. Run with Docker Compose
+### 4. Configure Docker Compose
+
+The `docker-compose.example.yml` file provides a template that sets up:
+- Traefik reverse proxy with Let's Encrypt SSL
+- IP whitelist middleware for webhook endpoint
+- Health and refresh-token endpoints without IP restrictions
+
+Steps:
+1. Copy the example Docker Compose file:
+   ```bash
+   cp docker-compose.example.yml docker-compose.yml
+   ```
+
+2. Edit `docker-compose.yml` and update the following values:
+   - **Traefik ports** (lines 7-9): Replace `YOUR_IP` with your server's public and internal IP addresses
+   - **Let's Encrypt email** (line 21): Replace `your-email@example.com` with your email address
+   - **Domain** (lines 47, 52, 56): Replace `trakt-webhook.example.com` with your actual domain name
+   - **IP whitelist** (line 62): Replace `YOUR_EMBY_IP/32` with your Emby server's IP address (e.g., `192.168.1.100/32`)
+
+   Example changes:
+   ```yaml
+   ports:
+     - "203.0.113.1:80:80"      # Your public IP
+     - "203.0.113.1:443:443"    # Your public IP
+     - "192.168.1.10:8080:8080" # Your public IP (you can remove this line or use any other interface IP for management)
+   
+   - --certificatesresolvers.letsencrypt.acme.email=admin@yourdomain.com
+   
+   - "traefik.http.routers.webhook.rule=Host(`trakt-webhook.yourdomain.com`)"
+   
+   - "traefik.http.middlewares.webhook-ipwhitelist.ipwhitelist.sourcerange=192.168.1.100/32"
+   ```
+
+### 5. Run with Docker Compose
 
 ```bash
 docker compose up -d
 ```
 
-### 5. Configure Emby Webhook
+### 6. Configure Emby Webhook
 
 In your Emby server settings, add a webhook pointing to:
 - `https://your-domain/webhook` (or `/`)
@@ -85,15 +118,6 @@ In your Emby server settings, add a webhook pointing to:
 | `HOST` | Server host (default: `0.0.0.0`) | No |
 | `PORT` | Server port (default: `5000`) | No |
 | `LOG_LEVEL` | Logging level: DEBUG, INFO, WARNING, ERROR (default: `INFO`) | No |
-
-### Docker Compose
-
-The included `docker-compose.yml` sets up:
-- Traefik reverse proxy with Let's Encrypt SSL
-- IP whitelist middleware for webhook endpoint
-- Health and refresh-token endpoints without IP restrictions
-
-Adjust the IP whitelist in `docker-compose.yml` (line 62) to match your Emby server IP.
 
 ## API Endpoints
 
